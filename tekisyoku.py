@@ -30,40 +30,6 @@ SCORING_RULES = {
     'Q10': {'A': [1], 'B': [2, 3, 4, 5, 6, 7, 8, 9, 10]}
 }
 
-# --- 質問リスト ---
-QUESTIONS = [
-    ("Q1", "働く上で最も重視するのは？", 
-     "組織全体の効率を考え、仕組みを改善・管理すること。", 
-     "利用者一人ひとりの暮らしに寄り添い、身体介護を丁寧に提供すること。"),
-    ("Q2", "困難な状況での自分の強みは？", 
-     "感情的にならず、安定した精神で業務を淡々と遂行できる。", 
-     "専門性を活かし、課題解決のために活発に意見を出し、行動できる。"),
-    ("Q3", "上司や組織の方針への態度は？", 
-     "自分の意見とは違っても、まずは上司の指示に従い、それを実行する。", 
-     "納得できない点があれば、改善を求めて積極的に自分の考えを主張する。"),
-    ("Q4", "理想とするサービス提供は？", 
-     "居宅（自宅）での生活を支えるため、外部サービスを計画・調整する。", 
-     "施設（入居）での生活全般を支えるため、チームで深く関わる。"),
-    ("Q5", "利用者さんとの関わり方で好むのは？", 
-     "小規模な環境で、認知症の方と家庭的に深く関わる。", 
-     "大規模な環境で、医療ニーズの高い方や看取りまで支援する。"),
-    ("Q6", "サービス提供の「時間」として好むのは？", 
-     "利用者さんの自宅を訪問し、短時間・一対一の支援を行う。", 
-     "施設や事業所で、日中または24時間体制で勤務する。"),
-    ("Q7", "サービスの目的として共感するのは？", 
-     "在宅復帰やリハビリを重視し、自立を促す集中的な支援。", 
-     "生活の継続を第一に、日々の活動を一緒に楽しみ、レクリエーションを行う。"),
-    ("Q8", "職場の「雰囲気」として理想的なのは？", 
-     "多くの専門職が連携し、医療的ケアにも対応できる手厚い環境。", 
-     "職員数が少なく、地域との連携も活発な複合的なサービスを提供する環境。"),
-    ("Q9", "自分の人柄を表すならどちら？", 
-     "積極的に前に出て引っ張るリーダーシップがある。", 
-     "誰に対しても温厚で人当たりが良く、穏やかに接することができる。"),
-    ("Q10", "仕事における自身の成長意欲は？", 
-     "現状維持を望み、ストレスに鈍感でいることの安定性を重視する。", 
-     "専門性を常に高め、新しい知識や技術の習得に意欲的に取り組む。"),
-]
-
 # --- 診断結果メッセージ ---
 MESSAGES = {
     "管理職": "🎉 天性のマネジメント気質！あなたは、**感情に左右されず冷静で、指示を素直に実行できるプロの裏方**です。現場の主役になるより、組織の平和と安定を最優先できます。全体のバランスを取り、大きな組織を円滑に動かす仕事にこそ、あなたの才能が輝きます！",
@@ -96,7 +62,7 @@ def calculate_score(answers):
     return ranked_results
 
 # --- Streamlit UIの構築 ---
-st.set_page_config(layout="wide") # 画面幅を広く使う
+st.set_page_config(layout="wide") 
 st.title("👨‍⚕️ 介護職の適職診断（全10問）")
 st.markdown("ご自身の考えに最も近いものを選んでください。")
 st.divider()
@@ -109,7 +75,6 @@ with st.form(key='aptitude_form'):
     for q_code, q_title, choice_a, choice_b in QUESTIONS:
         st.subheader(f"{q_code}. {q_title}")
         
-        # 選択肢の表示をAとBのコード名ではなく、テキストで表示
         options_text = [choice_a, choice_b]
         options_code = ["A", "B"]
         
@@ -141,9 +106,10 @@ if submitted:
         # 第一適職（同点含む）を抽出
         main_results = [name for score, name in ranked_results if score == main_score]
         
-        # 2位以下の結果を抽出
-        top_other_results = [(score, name) for score, name in ranked_results if score < main_score]
+        # 2位以下の結果を抽出（スコアがメインより低いもののみ）
+        other_results = [(score, name) for score, name in ranked_results if score < main_score]
         
+        # --- UI表示 ---
         st.balloons()
         st.success("## 診断完了！あなたの適職タイプは...")
         
@@ -158,30 +124,69 @@ if submitted:
         # 詳細な診断テキストの表示
         # -------------------
         
-        # メインの結果が一つだけの場合、その詳細メッセージを表示
         if len(main_results) == 1:
             main_job = main_results[0]
             st.warning(MESSAGES.get(main_job, "最適な結果が見つかりました！"))
-        
         else:
-            # 同点の結果が複数ある場合の汎用メッセージ
             st.warning(f"あなたは複数の職種（{main_results_text}）に、同じくらい高い適性を持っています！どの分野でも力を発揮できる万能タイプです。")
 
         st.divider()
-        st.subheader("💡 他の適職候補")
+        st.subheader("💡 他の適職候補（次点から最大3つの順位）")
         
-        # その他の適職を表示 (スコア表示なし)
-        if top_other_results:
+        # -------------------
+        # 他の適職候補の表示ロジック (3位まで)
+        # -------------------
+        
+        if other_results:
             st.write("以下もあなたの可能性を広げる職種です。")
             
-            # スコアが同じものに同じ順位をつけ、重複を削除して表示
-            current_rank = len(main_results) + 1
+            display_candidates = []
+            current_rank = 2 # 第一適職の次なので常に2位からスタート
             
-            for score, name in top_other_results:
-                st.write(f"**候補{current_rank}位**：{name}")
-                # スコアが変わらない限り順位を上げない (同点処理はここで簡略化)
-                if score != top_other_results[0][0]:
-                    current_rank += 1 
-                
+            # 2位のスコアを取得
+            next_score = other_results[0][0]
+            
+            # ランキングを付けて3位まで抽出（同点の結果は全て表示）
+            
+            # まず、2位の同点グループを全て抽出
+            same_score_group = []
+            for score, name in other_results:
+                if score == next_score:
+                    same_score_group.append(name)
+                else:
+                    break
+            
+            # 2位グループを候補に追加
+            for name in same_score_group:
+                display_candidates.append((current_rank, name))
+
+            
+            # 3位・4位グループを探す
+            remaining_results = other_results[len(same_score_group):]
+            if remaining_results:
+                current_rank += 1 # 3位へ
+                next_score = remaining_results[0][0]
+
+                for score, name in remaining_results:
+                    if score == next_score and current_rank <= 4: # 4位も表示する可能性を残し、次点を3位まで
+                        display_candidates.append((current_rank, name))
+                    elif score < next_score and current_rank <= 3:
+                        current_rank += 1 # 順位を上げる
+                        next_score = score
+                        if current_rank <= 4:
+                            display_candidates.append((current_rank, name))
+                        else:
+                            break
+                    elif current_rank > 4:
+                        break
+
+            # 最終的な表示 (順位が4位以上のものは切り捨てる)
+            final_candidates = [ (rank, name) for rank, name in display_candidates if rank <= 4 ]
+            
+            # 表示
+            for rank, name in final_candidates:
+                # 順位を正しく表示 (第一適職を1位とするため)
+                st.write(f"**第{rank}位候補**：{name}")
+
         else:
             st.write("他の職種も全体的に高い適性を持っています！すべての職種で高い潜在能力があります。")
